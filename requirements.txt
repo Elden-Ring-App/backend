@@ -1,0 +1,5 @@
+fastapi~=0.112.2
+uvicorn
+motor
+pydantic~=2.8.2
+python-dotenv
