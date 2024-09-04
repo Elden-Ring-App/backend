@@ -24,8 +24,7 @@ async def connect_to_mongo():
     host = os.getenv("HOST")
 
     try:
-        #mongodb.client = AsyncIOMotorClient(f"mongodb://{username}:{password}@{host}:{port}/")
-        mongodb.client = AsyncIOMotorClient(f"mongodb://{username}:{password}@localhost:{port}/") # to test with no Docker
+        mongodb.client = AsyncIOMotorClient(f"mongodb://{username}:{password}@{host}:{port}/")
         await mongodb.client.server_info()
         mongodb.db = mongodb.client.get_database(db_name)
 
