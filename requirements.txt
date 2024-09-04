@@ -1,5 +1,6 @@
 fastapi~=0.112.2
 uvicorn
-motor
+motor~=3.5.1
 pydantic~=2.8.2
-python-dotenv
+python-dotenv~=1.0.1
+pymongo~=4.8.0
