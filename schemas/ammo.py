@@ -1,22 +1,9 @@
 from pydantic import BaseModel, Field
-from bson import ObjectId
 from typing import Optional
 import math
 
 
-class PyObjectId(ObjectId):
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, v, field=None, config=None):
-        if not ObjectId.is_valid(v):
-            raise ValueError("Invalid ObjectId")
-        return str(v)
-
-
-class AmmoModel(BaseModel):
+class AmmoSchema(BaseModel):
     id: int
     name: str
     image: Optional[str]
@@ -26,22 +13,20 @@ class AmmoModel(BaseModel):
     passive_effect: Optional[str] = Field(..., alias="passive effect")
     description: Optional[str]
     dlc: Optional[int]
-    mongo_id: PyObjectId = Field(alias="_id")
 
     class Config:
         arbitrary_types_allowed = True
-        json_encoders = {
-            ObjectId: str,
-        }
-        populate_by_name = True
+        populate_by_name = True  # Allow field aliases to map API data to internal schema field names
 
     @classmethod
     def sanitize(cls, data):
+        """Sanitize the data by replacing NaN values with None."""
         for key, value in data.items():
             if isinstance(value, float) and math.isnan(value):
                 data[key] = None
         return data
 
     def dict(self, **kwargs):
+        """Override the dict method to sanitize the data."""
         data = super().dict(**kwargs)
         return self.sanitize(data)
