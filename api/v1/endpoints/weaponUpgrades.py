@@ -1,5 +1,6 @@
-from typing import List
 from fastapi import APIRouter, HTTPException
+from fastapi_pagination import Page
+from fastapi_pagination.ext.motor import paginate
 from db.mongo import mongodb
 from schemas.weaponUpgrade import WeaponUpgradeSchema
 from utils.logger import logger
@@ -18,24 +19,19 @@ async def get_weapon_upgrade(upgrade_id: int):
         logger.error("Weapon Upgrade does not exist")
         raise HTTPException(status_code=404, detail="Weapon Upgrade does not exist")
 
-    sanitized_upgrade = WeaponUpgradeSchema.sanitize(weapon_upgrade)
-    return WeaponUpgradeSchema(**sanitized_upgrade)
+    return WeaponUpgradeSchema(**weapon_upgrade)
 
 
-@router.get("/weaponUpgrades", response_model=List[WeaponUpgradeSchema])
+@router.get("/weaponUpgrades", response_model=Page[WeaponUpgradeSchema])
 async def get_weapon_upgrades():
     if mongodb.db is None:
         logger.error("Database connection not initialized")
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
     try:
-        upgrades_cursor = mongodb.db.get_collection("weaponUpgrades").find()
-        upgrades_list = []
-        async for upgrade in upgrades_cursor:
-            sanitized_upgrade = WeaponUpgradeSchema.sanitize(upgrade)
-            upgrades_list.append(WeaponUpgradeSchema(**sanitized_upgrade))
+        upgrades_cursor = mongodb.db.get_collection("weaponUpgrades")
 
-        return upgrades_list
+        return await paginate(upgrades_cursor)
 
     except Exception as e:
         logger.error(f"Failed to retrieve weapon upgrades: {e}")

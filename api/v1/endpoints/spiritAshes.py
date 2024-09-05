@@ -1,5 +1,7 @@
-from typing import List
 from fastapi import APIRouter, HTTPException
+from fastapi_pagination import Page
+from fastapi_pagination.ext.motor import paginate
+
 from db.mongo import mongodb
 from schemas.spiritAsh import SpiritAshSchema
 from utils.logger import logger
@@ -18,24 +20,19 @@ async def get_spirit_ash(spirit_ash_id: int):
         logger.error("Spirit Ash does not exist")
         raise HTTPException(status_code=404, detail="Spirit Ash does not exist")
 
-    sanitized_spirit_ash = SpiritAshSchema.sanitize(spirit_ash)
-    return SpiritAshSchema(**sanitized_spirit_ash)
+    return SpiritAshSchema(**spirit_ash)
 
 
-@router.get("/spiritAshes", response_model=List[SpiritAshSchema])
+@router.get("/spiritAshes", response_model=Page[SpiritAshSchema])
 async def get_spirit_ashes():
     if mongodb.db is None:
         logger.error("Database connection not initialized")
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
     try:
-        spirit_ashes_cursor = mongodb.db.get_collection("spiritAshes").find()
-        spirit_ashes_list = []
-        async for spirit_ash in spirit_ashes_cursor:
-            sanitized_spirit_ash = SpiritAshSchema.sanitize(spirit_ash)
-            spirit_ashes_list.append(SpiritAshSchema(**sanitized_spirit_ash))
+        spirit_ashes_cursor = mongodb.db.get_collection("spiritAshes")
 
-        return spirit_ashes_list
+        return await paginate(spirit_ashes_cursor)
 
     except Exception as e:
         logger.error(f"Failed to retrieve spirit ashes: {e}")

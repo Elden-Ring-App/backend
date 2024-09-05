@@ -1,5 +1,6 @@
-from typing import List
 from fastapi import APIRouter, HTTPException
+from fastapi_pagination import Page
+from fastapi_pagination.ext.motor import paginate
 from db.mongo import mongodb
 from schemas.bell import BellSchema
 from utils.logger import logger
@@ -18,24 +19,19 @@ async def get_bell(bell_id: int):
         logger.error("Bell does not exist")
         raise HTTPException(status_code=404, detail="Bell does not exist")
 
-    sanitized_bell = BellSchema.sanitize(bell)
-    return BellSchema(**sanitized_bell)
+    return BellSchema(**bell)
 
 
-@router.get("/bells", response_model=List[BellSchema])
+@router.get("/bells", response_model=Page[BellSchema])
 async def get_bells():
     if mongodb.db is None:
         logger.error("Database connection not initialized")
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
     try:
-        bells_cursor = mongodb.db.get_collection("bells").find()
-        bells_list = []
-        async for bell in bells_cursor:
-            sanitized_bell = BellSchema.sanitize(bell)
-            bells_list.append(BellSchema(**sanitized_bell))
+        bells_cursor = mongodb.db.get_collection("bells")
 
-        return bells_list
+        return await paginate(bells_cursor)
 
     except Exception as e:
         logger.error(f"Failed to retrieve bells: {e}")

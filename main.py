@@ -1,6 +1,7 @@
 import os
 
 from fastapi import FastAPI
+from fastapi_pagination import add_pagination
 from db.mongo import connect_to_mongo, close_mongo_connection
 from api.v1.endpoints import ammos, armors, bosses, creatures, weapons, ashesOfWar, bells, consumables, cookbooks, \
     crystalTears, greatRunes, incantations, keyItems, locations, materials, multiplayer, NPCs, remembrances, shields, \
@@ -39,6 +40,7 @@ app.include_router(tools.router, prefix=f"{prefix}")
 app.include_router(upgradeMaterials.router, prefix=f"{prefix}")
 app.include_router(weaponUpgrades.router, prefix=f"{prefix}")
 
+
 @app.on_event("startup")
 async def startup_db_client():
     await connect_to_mongo()
@@ -52,3 +54,5 @@ async def shutdown_db_client():
 @app.get("/")
 async def read_root():
     return {"message": "Hello, World!"}
+
+add_pagination(app)

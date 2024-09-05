@@ -1,5 +1,6 @@
-from typing import List
 from fastapi import APIRouter, HTTPException
+from fastapi_pagination import Page
+from fastapi_pagination.ext.motor import paginate
 from db.mongo import mongodb
 from schemas.material import MaterialSchema
 from utils.logger import logger
@@ -18,24 +19,19 @@ async def get_material(material_id: int):
         logger.error("Material does not exist")
         raise HTTPException(status_code=404, detail="Material does not exist")
 
-    sanitized_material = MaterialSchema.sanitize(material)
-    return MaterialSchema(**sanitized_material)
+    return MaterialSchema(**material)
 
 
-@router.get("/materials", response_model=List[MaterialSchema])
+@router.get("/materials", response_model=Page[MaterialSchema])
 async def get_materials():
     if mongodb.db is None:
         logger.error("Database connection not initialized")
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
     try:
-        materials_cursor = mongodb.db.get_collection("materials").find()
-        materials_list = []
-        async for material in materials_cursor:
-            sanitized_material = MaterialSchema.sanitize(material)
-            materials_list.append(MaterialSchema(**sanitized_material))
+        materials_cursor = mongodb.db.get_collection("materials")
 
-        return materials_list
+        return await paginate(materials_cursor)
 
     except Exception as e:
         logger.error(f"Failed to retrieve materials: {e}")

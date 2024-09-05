@@ -1,5 +1,6 @@
-from typing import List
 from fastapi import APIRouter, HTTPException
+from fastapi_pagination import Page
+from fastapi_pagination.ext.motor import paginate
 from db.mongo import mongodb
 from schemas.keyItem import KeyItemSchema
 from utils.logger import logger
@@ -18,24 +19,19 @@ async def get_key_item(key_item_id: int):
         logger.error("Key Item does not exist")
         raise HTTPException(status_code=404, detail="Key Item does not exist")
 
-    sanitized_key_item = KeyItemSchema.sanitize(key_item)
-    return KeyItemSchema(**sanitized_key_item)
+    return KeyItemSchema(**key_item)
 
 
-@router.get("/keyItems", response_model=List[KeyItemSchema])
+@router.get("/keyItems", response_model=Page[KeyItemSchema])
 async def get_key_items():
     if mongodb.db is None:
         logger.error("Database connection not initialized")
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
     try:
-        key_items_cursor = mongodb.db.get_collection("keyItems").find()
-        key_items_list = []
-        async for key_item in key_items_cursor:
-            sanitized_key_item = KeyItemSchema.sanitize(key_item)
-            key_items_list.append(KeyItemSchema(**sanitized_key_item))
+        key_items_cursor = mongodb.db.get_collection("keyItems")
 
-        return key_items_list
+        return await paginate(key_items_cursor)
 
     except Exception as e:
         logger.error(f"Failed to retrieve key items: {e}")

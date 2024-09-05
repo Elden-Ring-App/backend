@@ -1,5 +1,6 @@
-from typing import List
 from fastapi import APIRouter, HTTPException
+from fastapi_pagination import Page
+from fastapi_pagination.ext.motor import paginate
 from db.mongo import mongodb
 from schemas.incantation import IncantationSchema
 from utils.logger import logger
@@ -18,24 +19,19 @@ async def get_incantation(incantation_id: int):
         logger.error("Incantation does not exist")
         raise HTTPException(status_code=404, detail="Incantation does not exist")
 
-    sanitized_incantation = IncantationSchema.sanitize(incantation)
-    return IncantationSchema(**sanitized_incantation)
+    return IncantationSchema(**incantation)
 
 
-@router.get("/incantations", response_model=List[IncantationSchema])
+@router.get("/incantations", response_model=Page[IncantationSchema])
 async def get_incantations():
     if mongodb.db is None:
         logger.error("Database connection not initialized")
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
     try:
-        incantations_cursor = mongodb.db.get_collection("incantations").find()
-        incantations_list = []
-        async for incantation in incantations_cursor:
-            sanitized_incantation = IncantationSchema.sanitize(incantation)
-            incantations_list.append(IncantationSchema(**sanitized_incantation))
+        incantations_cursor = mongodb.db.get_collection("incantations")
 
-        return incantations_list
+        return await paginate(incantations_cursor)
 
     except Exception as e:
         logger.error(f"Failed to retrieve incantations: {e}")

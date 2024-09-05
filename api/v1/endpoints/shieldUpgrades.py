@@ -1,5 +1,6 @@
-from typing import List
 from fastapi import APIRouter, HTTPException
+from fastapi_pagination import Page
+from fastapi_pagination.ext.motor import paginate
 from db.mongo import mongodb
 from schemas.shieldUpgrade import ShieldUpgradeSchema
 from utils.logger import logger
@@ -18,24 +19,19 @@ async def get_shield_upgrade(upgrade_id: int):
         logger.error("Shield Upgrade does not exist")
         raise HTTPException(status_code=404, detail="Shield Upgrade does not exist")
 
-    sanitized_upgrade = ShieldUpgradeSchema.sanitize(shield_upgrade)
-    return ShieldUpgradeSchema(**sanitized_upgrade)
+    return ShieldUpgradeSchema(**shield_upgrade)
 
 
-@router.get("/shieldUpgrades", response_model=List[ShieldUpgradeSchema])
+@router.get("/shieldUpgrades", response_model=Page[ShieldUpgradeSchema])
 async def get_shield_upgrades():
     if mongodb.db is None:
         logger.error("Database connection not initialized")
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
     try:
-        upgrades_cursor = mongodb.db.get_collection("shieldUpgrades").find()
-        upgrades_list = []
-        async for upgrade in upgrades_cursor:
-            sanitized_upgrade = ShieldUpgradeSchema.sanitize(upgrade)
-            upgrades_list.append(ShieldUpgradeSchema(**sanitized_upgrade))
+        upgrades_cursor = mongodb.db.get_collection("shieldUpgrades")
 
-        return upgrades_list
+        return await paginate(upgrades_cursor)
 
     except Exception as e:
         logger.error(f"Failed to retrieve shield upgrades: {e}")
