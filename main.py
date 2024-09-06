@@ -13,7 +13,7 @@ app = FastAPI()
 if os.getenv("NETLIFY") is None:
     load_dotenv(dotenv_path=".env")
 
-prefix = os.getenv('PREFIX')
+prefix = os.getenv('API_PREFIX')
 
 app.include_router(ammos.router, prefix=f"{prefix}")
 app.include_router(armors.router, prefix=f"{prefix}")
