@@ -5,7 +5,8 @@ from utils.logger import logger
 
 from pymongo.errors import ServerSelectionTimeoutError
 
-load_dotenv()
+if os.getenv("NETLIFY") is None:
+    load_dotenv(dotenv_path=".env")
 
 
 class MongoDB:
@@ -19,7 +20,7 @@ mongodb = MongoDB()
 async def connect_to_mongo():
     username = os.getenv("USERNAME")
     password = os.getenv("PASSWORD")
-    port = os.getenv("PORT")
+    port = os.getenv("MONGO_PORT")
     db_name = os.getenv("DB_NAME")
     host = os.getenv("HOST")
 
