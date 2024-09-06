@@ -1,5 +1,6 @@
-from typing import List
 from fastapi import APIRouter, HTTPException
+from fastapi_pagination import Page
+from fastapi_pagination.ext.motor import paginate
 from db.mongo import mongodb
 from schemas.weapon import WeaponSchema
 from utils.logger import logger
@@ -18,24 +19,19 @@ async def get_weapon(weapon_id: int):
         logger.error("Weapon does not exist")
         raise HTTPException(status_code=404, detail="Weapon does not exist")
 
-    sanitized_weapon = WeaponSchema.sanitize(weapon)
-    return WeaponSchema(**sanitized_weapon)
+    return WeaponSchema(**weapon)
 
 
-@router.get("/weapons", response_model=List[WeaponSchema])
+@router.get("/weapons", response_model=Page[WeaponSchema])
 async def get_weapons():
     if mongodb.db is None:
         logger.error("Database connection not initialized")
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
     try:
-        weapons_cursor = mongodb.db.get_collection("weapons").find()
-        weapons_list = []
-        async for weapon in weapons_cursor:
-            sanitized_weapon = WeaponSchema.sanitize(weapon)
-            weapons_list.append(WeaponSchema(**sanitized_weapon))
+        weapons_cursor = mongodb.db.get_collection("weapons")
 
-        return weapons_list
+        return await paginate(weapons_cursor)
 
     except Exception as e:
         logger.error(f"Failed to retrieve weapons: {e}")

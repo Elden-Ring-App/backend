@@ -1,5 +1,6 @@
-from typing import List
 from fastapi import APIRouter, HTTPException
+from fastapi_pagination import Page
+from fastapi_pagination.ext.motor import paginate
 from db.mongo import mongodb
 from schemas.crystalTear import CrystalTearSchema
 from utils.logger import logger
@@ -18,24 +19,19 @@ async def get_crystal_tear(tear_id: int):
         logger.error("Crystal Tear does not exist")
         raise HTTPException(status_code=404, detail="Crystal Tear does not exist")
 
-    sanitized_tear = CrystalTearSchema.sanitize(tear)
-    return CrystalTearSchema(**sanitized_tear)
+    return CrystalTearSchema(**tear)
 
 
-@router.get("/crystalTears", response_model=List[CrystalTearSchema])
+@router.get("/crystalTears", response_model=Page[CrystalTearSchema])
 async def get_crystal_tears():
     if mongodb.db is None:
         logger.error("Database connection not initialized")
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
     try:
-        tears_cursor = mongodb.db.get_collection("crystalTears").find()
-        tears_list = []
-        async for tear in tears_cursor:
-            sanitized_tear = CrystalTearSchema.sanitize(tear)
-            tears_list.append(CrystalTearSchema(**sanitized_tear))
+        tears_cursor = mongodb.db.get_collection("crystalTears")
 
-        return tears_list
+        return await paginate(tears_cursor)
 
     except Exception as e:
         logger.error(f"Failed to retrieve crystal tears: {e}")

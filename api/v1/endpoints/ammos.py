@@ -1,9 +1,9 @@
-from typing import List
-
 from fastapi import APIRouter, HTTPException
 from db.mongo import mongodb
 from schemas.ammo import AmmoSchema
 from utils.logger import logger
+from fastapi_pagination import Page
+from fastapi_pagination.ext.motor import paginate
 
 router = APIRouter()
 
@@ -19,24 +19,19 @@ async def get_ammo(ammo_id: int):
         logger.error("Ammo does not exist")
         raise HTTPException(status_code=404, detail="Ammo does not exist")
 
-    sanitized_ammo = AmmoSchema.sanitize(ammo)
-    return AmmoSchema(**sanitized_ammo)
+    return AmmoSchema(**ammo)
 
 
-@router.get("/ammos", response_model=List[AmmoSchema])
+@router.get("/ammos", response_model=Page[AmmoSchema])
 async def get_ammos():
     if mongodb.db is None:
         logger.error("Database connection not initialized")
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
     try:
-        ammos_cursor = mongodb.db.get_collection("ammos").find()
-        ammos_list = []
-        async for ammo in ammos_cursor:
-            sanitized_ammo = AmmoSchema.sanitize(ammo)
-            ammos_list.append(AmmoSchema(**sanitized_ammo))
+        ammos_cursor = mongodb.db.get_collection("ammos")
 
-        return ammos_list
+        return await paginate(ammos_cursor)
 
     except Exception as e:
         logger.error(f"Failed to retrieve ammos: {e}")

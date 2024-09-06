@@ -1,5 +1,6 @@
-from typing import List
 from fastapi import APIRouter, HTTPException
+from fastapi_pagination import Page
+from fastapi_pagination.ext.motor import paginate
 from db.mongo import mongodb
 from schemas.skill import SkillSchema
 from utils.logger import logger
@@ -18,24 +19,19 @@ async def get_skill(skill_id: int):
         logger.error("Skill does not exist")
         raise HTTPException(status_code=404, detail="Skill does not exist")
 
-    sanitized_skill = SkillSchema.sanitize(skill)
-    return SkillSchema(**sanitized_skill)
+    return SkillSchema(**skill)
 
 
-@router.get("/skills", response_model=List[SkillSchema])
+@router.get("/skills", response_model=Page[SkillSchema])
 async def get_skills():
     if mongodb.db is None:
         logger.error("Database connection not initialized")
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
     try:
-        skills_cursor = mongodb.db.get_collection("skills").find()
-        skills_list = []
-        async for skill in skills_cursor:
-            sanitized_skill = SkillSchema.sanitize(skill)
-            skills_list.append(SkillSchema(**sanitized_skill))
+        skills_cursor = mongodb.db.get_collection("skills")
 
-        return skills_list
+        return await paginate(skills_cursor)
 
     except Exception as e:
         logger.error(f"Failed to retrieve skills: {e}")

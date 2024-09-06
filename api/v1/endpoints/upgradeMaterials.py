@@ -1,5 +1,6 @@
-from typing import List
 from fastapi import APIRouter, HTTPException
+from fastapi_pagination import Page
+from fastapi_pagination.ext.motor import paginate
 from db.mongo import mongodb
 from schemas.upgradeMaterial import UpgradeMaterialSchema
 from utils.logger import logger
@@ -18,24 +19,19 @@ async def get_upgrade_material(material_id: int):
         logger.error("Upgrade Material does not exist")
         raise HTTPException(status_code=404, detail="Upgrade Material does not exist")
 
-    sanitized_material = UpgradeMaterialSchema.sanitize(material)
-    return UpgradeMaterialSchema(**sanitized_material)
+    return UpgradeMaterialSchema(**material)
 
 
-@router.get("/upgradeMaterials", response_model=List[UpgradeMaterialSchema])
+@router.get("/upgradeMaterials", response_model=Page[UpgradeMaterialSchema])
 async def get_upgrade_materials():
     if mongodb.db is None:
         logger.error("Database connection not initialized")
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
     try:
-        materials_cursor = mongodb.db.get_collection("upgradeMaterials").find()
-        materials_list = []
-        async for material in materials_cursor:
-            sanitized_material = UpgradeMaterialSchema.sanitize(material)
-            materials_list.append(UpgradeMaterialSchema(**sanitized_material))
+        materials_cursor = mongodb.db.get_collection("upgradeMaterials")
 
-        return materials_list
+        return await paginate(materials_cursor)
 
     except Exception as e:
         logger.error(f"Failed to retrieve upgrade materials: {e}")

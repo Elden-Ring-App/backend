@@ -1,5 +1,6 @@
-from typing import List
 from fastapi import APIRouter, HTTPException
+from fastapi_pagination import Page
+from fastapi_pagination.ext.motor import paginate
 from db.mongo import mongodb
 from schemas.sorcery import SorcerySchema
 from utils.logger import logger
@@ -18,24 +19,19 @@ async def get_sorcery(sorcery_id: int):
         logger.error("Sorcery does not exist")
         raise HTTPException(status_code=404, detail="Sorcery does not exist")
 
-    sanitized_sorcery = SorcerySchema.sanitize(sorcery)
-    return SorcerySchema(**sanitized_sorcery)
+    return SorcerySchema(**sorcery)
 
 
-@router.get("/sorceries", response_model=List[SorcerySchema])
+@router.get("/sorceries", response_model=Page[SorcerySchema])
 async def get_sorceries():
     if mongodb.db is None:
         logger.error("Database connection not initialized")
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
     try:
-        sorceries_cursor = mongodb.db.get_collection("sorceries").find()
-        sorceries_list = []
-        async for sorcery in sorceries_cursor:
-            sanitized_sorcery = SorcerySchema.sanitize(sorcery)
-            sorceries_list.append(SorcerySchema(**sanitized_sorcery))
+        sorceries_cursor = mongodb.db.get_collection("sorceries")
 
-        return sorceries_list
+        return await paginate(sorceries_cursor)
 
     except Exception as e:
         logger.error(f"Failed to retrieve sorceries: {e}")

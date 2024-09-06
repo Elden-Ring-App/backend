@@ -1,6 +1,6 @@
 import json
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from typing import Optional, List
 import math
 
@@ -32,6 +32,13 @@ class LocationSchema(BaseModel):
                 except json.JSONDecodeError:
                     data[key] = None
         return data
+
+    @model_validator(mode="before")
+    @classmethod
+    def sanitize_data(cls, values):
+        """Apply to sanitize before validation."""
+        sanitized_values = cls.sanitize(values)
+        return sanitized_values
 
     def dict(self, **kwargs):
         data = super().dict(**kwargs)

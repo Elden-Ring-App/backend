@@ -1,10 +1,12 @@
-from typing import List
 from fastapi import APIRouter, HTTPException
+from fastapi_pagination import Page
+from fastapi_pagination.ext.motor import paginate
 from db.mongo import mongodb
 from schemas.greatRune import GreatRuneSchema
 from utils.logger import logger
 
 router = APIRouter()
+
 
 @router.get("/greatRunes/{rune_id}", response_model=GreatRuneSchema)
 async def get_great_rune(rune_id: int):
@@ -17,24 +19,19 @@ async def get_great_rune(rune_id: int):
         logger.error("Great Rune does not exist")
         raise HTTPException(status_code=404, detail="Great Rune does not exist")
 
-    sanitized_rune = GreatRuneSchema.sanitize(rune)
-    return GreatRuneSchema(**sanitized_rune)
+    return GreatRuneSchema(**rune)
 
 
-@router.get("/greatRunes", response_model=List[GreatRuneSchema])
+@router.get("/greatRunes", response_model=Page[GreatRuneSchema])
 async def get_great_runes():
     if mongodb.db is None:
         logger.error("Database connection not initialized")
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
     try:
-        runes_cursor = mongodb.db.get_collection("greatRunes").find()
-        runes_list = []
-        async for rune in runes_cursor:
-            sanitized_rune = GreatRuneSchema.sanitize(rune)
-            runes_list.append(GreatRuneSchema(**sanitized_rune))
+        runes_cursor = mongodb.db.get_collection("greatRunes")
 
-        return runes_list
+        return await paginate(runes_cursor)
 
     except Exception as e:
         logger.error(f"Failed to retrieve great runes: {e}")

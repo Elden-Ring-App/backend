@@ -1,5 +1,6 @@
-from typing import List
 from fastapi import APIRouter, HTTPException
+from fastapi_pagination import Page
+from fastapi_pagination.ext.motor import paginate
 from db.mongo import mongodb
 from schemas.location import LocationSchema
 from utils.logger import logger
@@ -18,24 +19,19 @@ async def get_location(location_id: int):
         logger.error("Location does not exist")
         raise HTTPException(status_code=404, detail="Location does not exist")
 
-    sanitized_location = LocationSchema.sanitize(location)
-    return LocationSchema(**sanitized_location)
+    return LocationSchema(**location)
 
 
-@router.get("/locations", response_model=List[LocationSchema])
+@router.get("/locations", response_model=Page[LocationSchema])
 async def get_locations():
     if mongodb.db is None:
         logger.error("Database connection not initialized")
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
     try:
-        locations_cursor = mongodb.db.get_collection("locations").find()
-        locations_list = []
-        async for location in locations_cursor:
-            sanitized_location = LocationSchema.sanitize(location)
-            locations_list.append(LocationSchema(**sanitized_location))
+        locations_cursor = mongodb.db.get_collection("locations")
 
-        return locations_list
+        return await paginate(locations_cursor)
 
     except Exception as e:
         logger.error(f"Failed to retrieve locations: {e}")

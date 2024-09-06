@@ -1,5 +1,8 @@
 from typing import List
 from fastapi import APIRouter, HTTPException
+from fastapi_pagination import Page
+from fastapi_pagination.ext.motor import paginate
+
 from db.mongo import mongodb
 from schemas.multiplayer import MultiplayerSchema
 from utils.logger import logger
@@ -18,24 +21,19 @@ async def get_multi(multi_id: int):
         logger.error("Multiplayer item does not exist")
         raise HTTPException(status_code=404, detail="Multiplayer item does not exist")
 
-    sanitized_multi = MultiplayerSchema.sanitize(multi)
-    return MultiplayerSchema(**sanitized_multi)
+    return MultiplayerSchema(**multi)
 
 
-@router.get("/multiplayer", response_model=List[MultiplayerSchema])
+@router.get("/multiplayer", response_model=Page[MultiplayerSchema])
 async def get_multi_items():
     if mongodb.db is None:
         logger.error("Database connection not initialized")
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
     try:
-        multi_cursor = mongodb.db.get_collection("multi").find()
-        multi_list = []
-        async for multi in multi_cursor:
-            sanitized_multi = MultiplayerSchema.sanitize(multi)
-            multi_list.append(MultiplayerSchema(**sanitized_multi))
+        multi_cursor = mongodb.db.get_collection("multi")
 
-        return multi_list
+        return await paginate(multi_cursor)
 
     except Exception as e:
         logger.error(f"Failed to retrieve multiplayer items: {e}")

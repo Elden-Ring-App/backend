@@ -1,5 +1,6 @@
-from typing import List
 from fastapi import APIRouter, HTTPException
+from fastapi_pagination import Page
+from fastapi_pagination.ext.motor import paginate
 from db.mongo import mongodb
 from schemas.ashOfWar import AshOfWarSchema  # Import the correct schema
 from utils.logger import logger
@@ -18,24 +19,19 @@ async def get_ash_of_war(ash_id: int):
         logger.error("Ash of War does not exist")
         raise HTTPException(status_code=404, detail="Ash of War does not exist")
 
-    sanitized_ash = AshOfWarSchema.sanitize(ash)
-    return AshOfWarSchema(**sanitized_ash)
+    return AshOfWarSchema(**ash)
 
 
-@router.get("/ashesOfWar", response_model=List[AshOfWarSchema])
+@router.get("/ashesOfWar", response_model=Page[AshOfWarSchema])
 async def get_ashes_of_war():
     if mongodb.db is None:
         logger.error("Database connection not initialized")
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
     try:
-        ashes_cursor = mongodb.db.get_collection("ashesOfWar").find()
-        ashes_list = []
-        async for ash in ashes_cursor:
-            sanitized_ash = AshOfWarSchema.sanitize(ash)
-            ashes_list.append(AshOfWarSchema(**sanitized_ash))
+        ashes_cursor = mongodb.db.get_collection("ashesOfWar")
 
-        return ashes_list
+        return await paginate(ashes_cursor)
 
     except Exception as e:
         logger.error(f"Failed to retrieve ashes of war: {e}")
