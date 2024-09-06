@@ -9,7 +9,10 @@ from api.v1.endpoints import ammos, armors, bosses, creatures, weapons, ashesOfW
 from dotenv import load_dotenv
 
 app = FastAPI()
-load_dotenv()
+
+if os.getenv("NETLIFY") is None:
+    load_dotenv(dotenv_path=".env")
+
 prefix = os.getenv('PREFIX')
 
 app.include_router(ammos.router, prefix=f"{prefix}")
